@@ -17,7 +17,7 @@ void tree(char *path, int depth){
     }
 
     if (fstat(fd, &st) < 0) {
-        fprintf(2, "tree: not a directory or file %s\n", path);
+        fprintf(2, "tree: cannot stat %s\n", path);
         close(fd);
         return;
     }
@@ -74,10 +74,30 @@ void tree(char *path, int depth){
 }
 
 int main(int argc, char *argv[]){
+    struct stat st;
+    int fd;
+
     if(argc == 1){
+        if(stat(".", &st) < 0 || st.type != T_DIR){
+            fprintf(2, "tree: cannot read .\n");
+            exit(1);
+        }
+
+        printf("./\n");
         tree(".", 1);
     }else{
+        
         for(int i = 1; i < argc; ++i){
+            if(stat(argv[i], &st) < 0){
+                fprintf(2, "tree: cannot stat %s\n", argv[i]);
+                continue;
+            }
+            if(st.type != T_DIR){
+                fprintf(2, "tree: not a directory %s\n", argv[i]);
+                continue;
+            }
+
+            printf("%s/\n", argv[i]);
             tree(argv[i], 1);
         }
     }
