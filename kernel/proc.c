@@ -4,6 +4,7 @@
 #include "riscv.h"
 #include "spinlock.h"
 #include "proc.h"
+#include "procinfo.h"
 #include "defs.h"
 
 struct cpu cpus[NCPU];
@@ -692,4 +693,29 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+// Tìm tiến trình theo pid và điền thông tin vào *pi (bộ nhớ kernel).
+// Trả về 0 nếu tìm thấy, -1 nếu không.
+int
+getprocinfo(int pid, struct procinfo *pi)
+{
+  struct proc *p;
+
+  acquire(&wait_lock);              // bảo vệ p->parent
+  for(p = proc; p < &proc[NPROC]; p++){
+    acquire(&p->lock);
+    if(p->state != UNUSED && p->pid == pid){
+      pi->pid = p->pid;
+      pi->ppid = p->parent ? p->parent->pid : 0;
+      pi->state = p->state;
+      pi->sz = p->sz;
+      safestrcpy(pi->name, p->name, sizeof(pi->name));
+      release(&p->lock);
+      release(&wait_lock);
+      return 0;
+    }
+    release(&p->lock);
+  }
+  release(&wait_lock);
+  return -1;
 }

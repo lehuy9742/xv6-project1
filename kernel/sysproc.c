@@ -5,6 +5,7 @@
 #include "memlayout.h"
 #include "spinlock.h"
 #include "proc.h"
+#include "procinfo.h"
 
 uint64
 sys_exit(void)
@@ -90,4 +91,21 @@ sys_uptime(void)
   xticks = ticks;
   release(&tickslock);
   return xticks;
+}
+uint64
+sys_procinfo(void)
+{
+  int pid;
+  uint64 uaddr;
+  struct procinfo pi;
+
+  argint(0, &pid);
+  argaddr(1, &uaddr);
+  if(uaddr == 0)                       // NULL
+    return -1;
+  if(getprocinfo(pid, &pi) < 0)        // lock đã được nhả bên trong
+    return -1;
+  if(copyout(myproc()->pagetable, uaddr, (char *)&pi, sizeof(pi)) < 0)
+    return -1;
+  return 0;
 }
